@@ -2,11 +2,8 @@ import requests
 
 from .secrets import login_key
 
-
-def whoami():
-    token = login_key.get()
-
-    response = requests.get(
+def whoami_response(token):
+    return requests.get(
         "https://api.github.com/user",
         headers={
             "Authorization": f"Bearer {token}",
@@ -14,6 +11,7 @@ def whoami():
         },
     )
 
+def print_whoami(response):
     if response.status_code == 401:
         print("Stored token is no longer valid.")
         return
@@ -26,4 +24,10 @@ def whoami():
     print(f"Name  : {user.get('name') or '-'}")
     print(f"Email : {user.get('email') or '-'}")
     print(f"URL   : {user['html_url']}")
-    import json
+
+
+def whoami():
+    token = login_key.get()
+    print_whoami(whoami_response(token))
+
+    
