@@ -4,7 +4,7 @@ from pathlib import Path
 from platformdirs import user_config_dir
 
 
-class Config:
+class AllConfig:
     def __init__(self, app_name="classroom"):
         config_dir = Path(user_config_dir(app_name))
         config_dir.mkdir(parents=True, exist_ok=True)
@@ -48,4 +48,19 @@ class Config:
                 ensure_ascii=False,
             )
 
-config = Config()
+config = AllConfig()
+class Config:
+    def __init__(self, key): 
+        self.key = key
+
+    def save(self, value):
+        config.set(self.key, value).save()
+
+    def get(self):
+        return config.get(self.key)
+
+    def delete(self):
+        config.remove().save()
+
+client_config = Config("client")
+

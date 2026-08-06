@@ -1,5 +1,5 @@
 from .secrets import client_key 
-from .config import config
+from .config import client_config
 
 
 def client(id, secret, delete, show_secret):
@@ -8,13 +8,13 @@ def client(id, secret, delete, show_secret):
         raise Exception("id and secret must be provided together or both omitted")
 
     if delete:
-        config.remove("client").save()
+        client_config.delete()
         client_key.delete()
     elif secret:
-        config.set("client", id).save()
+        client_config.save(id)
         client_key.save(secret)
     else:
-        out = f"client id: {config.get("client")}. "
+        out = f"client id: {client_config.get()}. "
         if show_secret:
             try:
                 out += f"Client secret: {client_key.get()}"

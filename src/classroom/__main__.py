@@ -1,6 +1,8 @@
 from .commandBuilder import CommandBuilder, SubCommandBuilder
 from .login import login
 from.client import client
+from .logout import logout
+from .whoami import whoami
 import textwrap
 
 
@@ -8,6 +10,8 @@ import textwrap
 def main():
     builder = CommandBuilder()
     builder.addCommand(login, help="github login")
+    builder.addCommand(logout, help="github logout")
+    builder.addCommand(whoami, help="show data about current github user")
     builder.addCommand(client, help="Handle GitHub client id and secret (set/get/delete)", 
                        epilog=textwrap.dedent("""
                             Examples:

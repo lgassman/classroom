@@ -5,6 +5,7 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import requests
 from .secrets import client_key, login_key
+from .config import client_config
 
 import logging 
 import threading
@@ -19,8 +20,7 @@ def open_browser(url):
 
     threading.Thread(target=run, daemon=True).start()
 
-def login(client_id):
-    print(f"Client ID: {client_id}")
+def login():
     verifier, challenge = generate_pkce()
     client_secret = client_key.get()
 
@@ -30,7 +30,7 @@ def login(client_id):
 
 
     params = {
-        "client_id": client_id,
+        "client_id": client_config.get(),
         "redirect_uri": redirect_url,
         "response_type": "code",
         "code_challenge": challenge,
@@ -56,7 +56,7 @@ def login(client_id):
     response = requests.post(
         TOKEN_URL,
         json={
-            "client_id": client_id,
+            "client_id": client_config.get(),
             "code": server.code,
             "redirect_uri": redirect_url,
             "code_verifier": verifier,
