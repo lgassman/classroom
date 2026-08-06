@@ -4,6 +4,11 @@ version = "0.1.0"
 description = "GitHub course administration tool"
 readme = "README.md"
 requires-python = ">=3.14"
+dependencies = [
+    "requests>=2.32",
+    "keyring>=25.6",
+    "platformdirs>=4.0"
+]
 
 [build-system]
 requires = ["setuptools>=68"]

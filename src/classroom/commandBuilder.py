@@ -1,8 +1,11 @@
 import inspect
 import argparse
+import abc
+
+       
 class CommandBuilder() :
     def __init__(self, prog = "classroom", description= "GitHub course administration tool", **args):
-        self.parser = argparse.ArgumentParser(prog=prog, description=description, **args)
+        self.parser = argparse.ArgumentParser(prog=prog, description=description, formatter_class=argparse.RawDescriptionHelpFormatter, **args)
         self.subparsers = self.parser.add_subparsers(dest="command",required=True)
 
     def addCommand(self, handler, **args):
@@ -23,12 +26,12 @@ class CommandBuilder() :
 
 class SubCommandBuilder():
     def __init__(self, commandBuilder, handler, **args):
-        self.sub = commandBuilder.subparsers.add_parser(handler.__name__, **args)
+        self.sub = commandBuilder.subparsers.add_parser(handler.__name__,  formatter_class=argparse.RawDescriptionHelpFormatter, **args)
         self.sub.set_defaults(run=handler)
         self.parameters = inspect.signature(handler).parameters
 
     def _validate_param(self, name):
-        if name not in self.parameters:
+        if name.replace("-", "_") not in self.parameters:
             raise ValueError(
                 f"Argument '{name}' is not a parameter of {self.handler.__name__}"
             )
