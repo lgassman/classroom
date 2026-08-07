@@ -53,7 +53,7 @@ def login():
 
     if server.whoami:
         print_whoami(server.whoami)
-        print("If this is not the account you intended to use, log out from GitHub in your browser and try again." 
+        print("If this is not the account you intended to use, log out from GitHub in your browser and try again.") 
     
 class CallbackHandler(BaseHTTPRequestHandler):
 

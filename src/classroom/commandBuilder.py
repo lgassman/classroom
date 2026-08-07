@@ -1,14 +1,12 @@
 import inspect
 import argparse
-import abc
-
        
 class CommandBuilder() :
     def __init__(self, prog = "classroom", description= "GitHub course administration tool", **args):
         self.parser = argparse.ArgumentParser(prog=prog, description=description, formatter_class=argparse.RawDescriptionHelpFormatter, **args)
         self.subparsers = self.parser.add_subparsers(dest="command",required=True)
 
-    def addCommand(self, handler, **args):
+    def addCommand(self, handler, **args)->SubCommandBuilder: 
         return SubCommandBuilder(self, handler, **args)
 
     def run(self):
