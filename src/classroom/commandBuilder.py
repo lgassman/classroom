@@ -49,26 +49,13 @@ class SubCommandBuilder():
 from pathlib import Path
 
 
-class File:
-    def __init__(self, path):
-        self.path = Path(path).expanduser()
+def line_file(path):
+    path = Path(path).expanduser()
 
-        if not self.path.exists():
-            raise ValueError(f"File does not exist: {self.path}")
+    if not path.exists():
+        raise ValueError(f"File does not exist: {path}")
 
-        if not self.path.is_file():
-            raise ValueError(f"Not a file: {self.path}")
+    if not path.is_file():
+        raise ValueError(f"Not a file: {path}")
 
-    def read(self):
-        return self.path.read_bytes()
-
-    def __call__(self):
-        return self.read()
-
-    def __str__(self):
-        return str(self.path)
-
-
-class LineFile(File):
-    def read(self):
-        return self.path.read_text(encoding="utf-8").splitlines()
+    return path.read_text(encoding="utf-8").strip().splitlines()

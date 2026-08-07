@@ -1,4 +1,4 @@
-from .commandBuilder import CommandBuilder, LineFile
+from .commandBuilder import CommandBuilder, line_file
 from .login import login
 from.client import client
 from .logout import logout
@@ -12,6 +12,7 @@ import textwrap
 
 
 def main():
+    configure_logging()
     builder = CommandBuilder()
     (builder.addCommand(client, help="Handle GitHub client id and secret (set/get/delete)", epilog=_client_epilog())
         .add_argument("id", nargs="?", help="The github client id") \
@@ -31,7 +32,7 @@ def main():
         .add_argument("--set-current", action="store_true", help="Set this course as the current course")
         .add_argument("--unset", action="store_true", help="Clear the current course")
         .add_argument("--untrack", action="store_true", help="Remove the course from the local configuration")
-        .add_argument("roster", nargs="?", type=LineFile, help="Path to a file containing GitHub student accounts, one account per line"))
+        .add_argument("roster", nargs="?", type=line_file, help="Path to a file containing GitHub student accounts, one account per line"))
 
     builder.run()
 

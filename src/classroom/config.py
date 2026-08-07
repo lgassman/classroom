@@ -117,7 +117,7 @@ class ListConfig(Config):
     def add_if_missing(self, value):
         values = self.get()
         json_value = self.serializer.to_json(value)
-        if json_value in values:
+        if not json_value in values:
             values.append(json_value)
             config.set(self.key, values).save()
 
