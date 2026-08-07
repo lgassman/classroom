@@ -107,17 +107,18 @@ class ListConfig(Config):
         config.add(self.key, self.serializer.to_json(value)).save()
 
     def remove(self, value):
-        values = self.get()
+        values = config.get_list(self.key)
         json_value = self.serializer.to_json(value)
+
         if json_value in values:
             values.remove(json_value)
             config.set(self.key, values).save()
 
 
     def add_if_missing(self, value):
-        values = self.get()
+        values = config.get_list(self.key)
         json_value = self.serializer.to_json(value)
-        if not json_value in values:
+
+        if json_value not in values:
             values.append(json_value)
             config.set(self.key, values).save()
-

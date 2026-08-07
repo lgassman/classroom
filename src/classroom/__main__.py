@@ -25,7 +25,7 @@ def main():
     (builder.addCommand(course, help="Handle a course", epilog=_course_epilog())
         .add_argument("--organization", "-o", help="GitHub organization name")
         .add_argument("--year", "-y",  help="Academic year")
-        .add_argument("--semester","-s",  help="Academic semester (1 or 2)")
+        .add_argument("--semester","-s",  help="Academic semester")
         .add_argument("--course","-c", help="Course section number")
         .add_argument("--update","-u",  action="store_true", help="Update an existing course")
         .add_argument("--delete", action="store_true", help="Delete the course")
