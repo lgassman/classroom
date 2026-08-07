@@ -5,7 +5,7 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import requests
 from .secrets import client_key, login_key
-from .config import client_config
+from .client import client_config
 from .whoami import whoami_response, print_whoami
 
 import logging 
@@ -38,22 +38,22 @@ def login():
 
     url = f"{AUTH_URL}?{urlencode(params)}"
 
-    print("Opening browser...")
+    logging.debug("Opening browser...")
     open_browser(url)
-    print("Browser abierto")
+    logging.debug("Browser abierto")
 
     server.handle_request()
 
     server.server_close()
 
     if not server.error:
-        print("Success!")
+        logging.info("Success!")
     else:
-        print("Failure")
+        logging.error("Failure!")
 
     if server.whoami:
         print_whoami(server.whoami)
-        print("If this is not the account you intended to use, log out from GitHub in your browser and try again.") 
+        logging.info("If this is not the account you intended to use, log out from GitHub in your browser and try again.") 
     
 class CallbackHandler(BaseHTTPRequestHandler):
 
@@ -107,7 +107,7 @@ class CallbackHandler(BaseHTTPRequestHandler):
 
         login_key.save(data["access_token"])
         self.server.success = True
-        whoami_response_data = whoami_response(data["access_token"])
+        whoami_response_data = whoami_response()
         if whoami_response_data.status_code != 200:
             html = "Login is ok, but no data about the user"
         else:

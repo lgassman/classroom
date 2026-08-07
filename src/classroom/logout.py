@@ -1,6 +1,7 @@
 import requests
+import logging
 
-from .config import client_config
+from .client import client_config
 from .secrets import client_key, login_key
 
 
@@ -23,8 +24,8 @@ def logout():
         )
 
         response.raise_for_status()
-        print("GitHub token revoked.")
+        logging.info("GitHub token revoked.")
 
     finally:
         login_key.delete()
-        print("Local token removed.")
+        logging.info("Local token removed.")

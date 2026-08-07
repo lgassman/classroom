@@ -19,8 +19,16 @@ class Key:
             raise RuntimeError(self.not_found_error)
         return secret
 
+class AuthKey(Key):
+    def headers(self):
+        return {
+            "Authorization": f"Bearer {self.get()}",
+            "Accept": "application/vnd.github+json",
+        }
+
+
 client_key = Key("client_secret", "The client secret is not configured. please run `client <client_key> <client_secret>` command")
-login_key = Key("login","Login token not found. Please run `login` command")
+login_key = AuthKey("login","Login token not found. Please run `login` command")
     
 
 

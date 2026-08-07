@@ -1,9 +1,11 @@
-from .commandBuilder import CommandBuilder, SubCommandBuilder
+from .commandBuilder import CommandBuilder, LineFile
 from .login import login
 from.client import client
 from .logout import logout
 from .whoami import whoami
 from .course import course
+from .config import config
+import logging
 
 import textwrap
 
@@ -11,27 +13,25 @@ import textwrap
 
 def main():
     builder = CommandBuilder()
-    builder.addCommand(client, help="Handle GitHub client id and secret (set/get/delete)", epilog=_client_epilog())\
+    (builder.addCommand(client, help="Handle GitHub client id and secret (set/get/delete)", epilog=_client_epilog())
         .add_argument("id", nargs="?", help="The github client id") \
-        .add_argument("secret", nargs="?", metavar="SECRET",help="The github client secret") \
-        .add_argument("--delete",action="store_true",help="Delete the client secret from keyring")\
-        .add_argument("--show-secret",action="store_true",help="show the secret")
+        .add_argument("secret", nargs="?", metavar="SECRET",help="The github client secret") 
+        .add_argument("--delete",action="store_true",help="Delete the client secret from keyring")
+        .add_argument("--show-secret",action="store_true",help="show the secret"))
     builder.addCommand(login, help="github login")
     builder.addCommand(logout, help="github logout")
     builder.addCommand(whoami, help="show data about current github user")
-    # builder.addCommand(course, help="Handle a
-    builder.addCommand(whoami, help="show data about current github user")
-    builder.addCommand(course, help="Handle a course", epilog=_course_epilog())\
-        .add_argument("-o", "--organization", help="Organizaction of github")\
-        .add_argument("-y", "--year", help="Organizaction of github")\
-        .add_argument("-s", "--semester", help="semester")\
-        .add_argument("-c", "--course", help="course")\
-        .add_argument("-u", "--update", action="store_true", help="Expects the course to exist and updates it")\
-        .add_argument("--delete", action="store_true", help="Expects the course to exist and updates it")\
-        .add_argument("--set", action="store_true", help="Set the current course")\
-        .add_argument("--unset", action="store_true", help="Unset the current course")\
-        .add_argument("--untrack", action="store_true", help="Unset the current course")\
-        .add_argument("roster", nargs="?", help="Path to a file with GitHub student accounts, one account per line.") \
+    (builder.addCommand(course, help="Handle a course", epilog=_course_epilog())
+        .add_argument("--organization", "-o", help="GitHub organization name")
+        .add_argument("--year", "-y",  help="Academic year")
+        .add_argument("--semester","-s",  help="Academic semester (1 or 2)")
+        .add_argument("--course","-c", help="Course section number")
+        .add_argument("--update","-u",  action="store_true", help="Update an existing course")
+        .add_argument("--delete", action="store_true", help="Delete the course")
+        .add_argument("--set-current", action="store_true", help="Set this course as the current course")
+        .add_argument("--unset", action="store_true", help="Clear the current course")
+        .add_argument("--untrack", action="store_true", help="Remove the course from the local configuration")
+        .add_argument("roster", nargs="?", type=LineFile, help="Path to a file containing GitHub student accounts, one account per line"))
 
     builder.run()
 
@@ -89,6 +89,18 @@ def _course_epilog():
             Untrack a course:
                 classroom course -o obj1unq -y 2026 -s 1 -c 1 --untrack
         """)
+
+def configure_logging():
+    #TODO algun dia voy a hacer el comando para configurar el log
+    level_name = config.get("log_level", "INFO")
+    log_format = config.get("log_format", "%(levelname)s: %(message)s")
+
+    level = getattr(logging, level_name.upper(), logging.INFO)
+
+    logging.basicConfig(
+        level=level,
+        format=log_format,
+    )
 
 if __name__ == "__main__":
     raise SystemExit(main())

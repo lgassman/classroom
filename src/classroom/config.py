@@ -1,6 +1,7 @@
 import json
 import shutil
 from pathlib import Path
+import logging
 
 from platformdirs import user_config_dir
 
@@ -27,7 +28,7 @@ class AllConfig:
         except json.JSONDecodeError:
             corrupt_file = self.file.with_suffix(".json.corrupt")
 
-            print(
+            logging.warning(
                 f"Warning: configuration file is corrupted. "
                 f"A backup was created at: {corrupt_file}"
             )
@@ -75,15 +76,23 @@ class AllConfig:
 config = AllConfig()
 
 
+class NoneSerializer:
+    def to_json(self, object):
+        return object
+
+    def from_json(self, jsonObject):
+        return jsonObject
+
 class Config:
-    def __init__(self, key):
+    def __init__(self, key, serializer=NoneSerializer()):
         self.key = key
+        self.serializer = serializer
 
     def save(self, value):
-        config.set(self.key, value).save()
+        config.set(self.key, self.serializer.to_json(value)).save()
 
     def get(self):
-        return config.get(self.key)
+        return self.serializer.from_json(config.get(self.key))
 
     def delete(self):
         config.remove(self.key).save()
@@ -92,16 +101,23 @@ class Config:
 class ListConfig(Config):
 
     def get(self):
-        return config.get_list(self.key)
+        return [self.serializer.from_json(value) for value in config.get_list(self.key)]
 
     def add(self, value):
-        config.add(self.key, value).save()
+        config.add(self.key, self.serializer.to_json(value)).save()
 
     def remove(self, value):
         values = self.get()
-
-        if value in values:
-            values.remove(value)
+        json_value = self.serializer.to_json(value)
+        if json_value in values:
+            values.remove(json_value)
             config.set(self.key, values).save()
 
-        return self
+
+    def add_if_missing(self, value):
+        values = self.get()
+        json_value = self.serializer.to_json(value)
+        if json_value in values:
+            values.append(json_value)
+            config.set(self.key, values).save()
+

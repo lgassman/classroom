@@ -1,6 +1,7 @@
 from .secrets import client_key 
-from .config import client_config
-
+from .config import Config
+import logging
+client_config = Config("client")
 
 def client(id, secret, delete, show_secret):
 
@@ -21,5 +22,5 @@ def client(id, secret, delete, show_secret):
             except:
                 out += f"Client secret not present." 
             
-        print(out)
+        logging.info(out)
 
