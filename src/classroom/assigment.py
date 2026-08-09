@@ -66,7 +66,7 @@ def _create_assignment(course, template, name, private, users):
     for person in _get_assignment_users(course, users):
         try:
             logging.info(f"Working with {person['login']}")
-            repository_name = f"{course.name}-{name}-{person['login']}"
+            repository_name = f"{course.name}_{name}_{person['login']}"
             _create_assignment_repository(course.organization, repository_name, template, person["login"])
             success += 1
         except KeyError as e:
@@ -178,7 +178,7 @@ def _create_feedback_pull_request(orga, name, default_branch):
 
 INITIAL_COMMITS = 2        
 def _show_assignment(course, name):
-    prefix = f"{course.name}-{name}-"
+    prefix = f"{course.name}_{name}_"
     repositories = _find_assignment_repositories(course.organization, prefix)
     students = {student["login"] for student in find_team(course.organization, course.name) if 'login' in student}
 
@@ -245,11 +245,20 @@ def _count_repository_commits(orga, repository):
     return len(response.json())
 
 
+def _show_assignments(course):
+    prefix = f"{course.name}_"
+    repositories = _find_assignment_repositories(course.organization, prefix)
+
+    assignments = {}
+
+    for repository in repositories:
+        assignment = repository["name"][len(prefix):].rsplit("_", 1)[0]
+        assignments[assignment] = assignments.get(assignment, 0) + 1
+
+    for assignment in sorted(assignments):
+        logging.info(f"{assignment} ({assignments[assignment]} repositories)")
+        
 def _clone_assignment(course, name, path):
     pass
 
 
-
-
-def _show_assignments(course):
-    pass
