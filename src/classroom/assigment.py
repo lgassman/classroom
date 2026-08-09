@@ -25,9 +25,12 @@ def _get_course(organization, year, semester, course):
     )
 
 
-def assignment(organization, year, semester, course, template, name, private, clone):
+def assignment(organization, year, semester, course, template, name, private, clone, user):
     specified_course = _get_course(organization, year, semester, course)
 
+    if user and not (template or clone):
+        raise ValueError("--user can only be used when creating or cloning an assignment")
+    
     if private and not template:
         raise ValueError("--private can only be used when creating an assignment")
 
@@ -35,7 +38,7 @@ def assignment(organization, year, semester, course, template, name, private, cl
         raise ValueError("--clone requires an assignment name")
 
     if template:
-        return _create_assignment(specified_course, template, name, private)
+        return _create_assignment(specified_course, template, name, private, user)
 
     if clone:
         return _clone_assignment(specified_course, name, clone)
@@ -45,8 +48,12 @@ def assignment(organization, year, semester, course, template, name, private, cl
 
     return _show_assignments(specified_course)
 
+def _get_assignment_users(course, users):
+    if users:
+        return ({"login": username} for username in users)
+    return find_team(course.organization, course.name)
 
-def _create_assignment(course, template, name, private):
+def _create_assignment(course, template, name, private, users):
     template = RepoTemplate.from_str(template, private=private)
     _find_default_branch(template)
 
@@ -56,21 +63,21 @@ def _create_assignment(course, template, name, private):
     errors = []
     success = 0
 
-    for student in find_team(course.organization, course.name):
+    for person in _get_assignment_users(course, users):
         try:
-            logging.info(f"Working with {student['login']}")
-            repository_name = f"{course.name}-{name}-{student['login']}"
-            _create_assignment_repository(course.organization, repository_name, template, student["login"])
+            logging.info(f"Working with {person['login']}")
+            repository_name = f"{course.name}-{name}-{person['login']}"
+            _create_assignment_repository(course.organization, repository_name, template, person["login"])
             success += 1
         except KeyError as e:
             if e.args[0] == "login":
-                error = f"No login name for student {student}"
+                error = f"No login name for {person}"
                 logging.debug(error)
                 errors.append(error)
             else:
                 raise
         except HTTPError as e:
-            error = f"{student['login']}: Error {e.response.status_code} creating assignment for {repository_name}: {e.response.text}"
+            error = f"{person['login']}: Error {e.response.status_code} creating assignment for {repository_name}: {e.response.text}"
             logging.debug(error)
             errors.append(error)
         finally:

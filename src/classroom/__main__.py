@@ -42,7 +42,8 @@ def main():
         .add_argument("--template", "-t", help="GitHub template repository URL")
         .add_argument("--name", "-n", help="Assignment name")
         .add_argument("--private", action="store_true", help="Create private repositories")
-        .add_argument("--clone", metavar="PATH", help="Clone assignment repositories to PATH"))
+        .add_argument("--clone", metavar="PATH", help="Clone assignment repositories to PATH")
+        .add_argument("--user", "-u", nargs="+", help="GitHub usernames to process instead of the course students. Useful for teachers"))
     builder.run()
 
 def _client_epilog():
@@ -101,49 +102,54 @@ def _course_epilog():
         """)
 
 def _assignment_epilog():
-    return """
-    Assignment examples:
+    return textwrap.dedent("""
+        A current course is used when no course is specified.
 
-    Create an assignment in the current course:
-        classroom assignment -t https://github.com/obj1unq/tp1-template
+        Examples:
 
-    Create an assignment for a specific course:
-        classroom assignment -o obj1unq -y 2026 -s 2 -c 4 -t https://github.com/obj1unq/tp1-template
+            Create an assignment in the current course:
+                classroom assignment -t https://github.com/obj1unq/pepitaEnunciado
 
-    Create an assignment with a custom name in the current course:
-        classroom assignment -t https://github.com/obj1unq/tp1-template -n first-assignment
+            Create an assignment specifying the course:
+                classroom assignment -o obj1unq -y 2026 -s 2 -c 2 -t https://github.com/obj1unq/pepitaEnunciado
 
-    Create an assignment with private repositories in the current course:
-        classroom assignment -t https://github.com/obj1unq/tp1-template --private
+            Create an assignment with a custom name:
+                classroom assignment -t https://github.com/obj1unq/pepitaEnunciado -n tp1
 
-    List all assignments in the current course:
-        classroom assignment
+            Create private repositories:
+                classroom assignment -t https://github.com/obj1unq/pepitaEnunciado --private
 
-    List all assignments for a specific course:
-        classroom assignment -o obj1unq -y 2026 -s 2 -c 4
+            Create an assignment for specific users instead of the course students:
+                classroom assignment -t https://github.com/obj1unq/pepitaEnunciado -u lgassman otro_usuario
 
-    List repositories for an assignment in the current course:
-        classroom assignment -n tp1
+            List assignments in the current course:
+                classroom assignment
 
-    List repositories for an assignment in a specific course:
-        classroom assignment -o obj1unq -y 2026 -s 2 -c 4 -n tp1
+            List assignments in a specific course:
+                classroom assignment -o obj1unq -y 2026 -s 2 -c 2
 
-    Clone an assignment from the current course:
-        classroom assignment -n tp1 --clone ~/assignments
+            List repositories for an assignment:
+                classroom assignment -n tp1
 
-    Clone an assignment from a specific course:
-        classroom assignment -o obj1unq -y 2026 -s 2 -c 4 -n tp1 --clone ~/assignments
+            Clone an assignment:
+                classroom assignment -n tp1 --clone ~/assignments
 
-    If no course is specified, the current course is used.
+            Clone repositories for specific users instead of the course students:
+                classroom assignment -n tp1 --clone ~/assignments -u lgassman otro_usuario
 
-    Without --template, the command only queries existing assignments
-    and repositories. The --name option selects a specific assignment.
+        The --user option processes the specified GitHub users instead of the
+        students in the course. This can be useful for teachers who need to
+        create or clone their own assignment repositories.
 
-    When --clone is specified, repositories are cloned under:
-        <path>/<course>/<assignment>/<student>
+        Without --template, the command only queries existing assignments
+        and repositories. The --name option selects a specific assignment.
 
-    Existing repositories are updated with git pull.
-    """
+        When --clone is specified, repositories are cloned under:
+            <path>/<course>/<assignment>/<student>
+
+        Existing repositories are updated with git pull.
+        """)
+
 def configure_logging():
     #TODO algun dia voy a hacer el comando para configurar el log
     level_name = config.get("log_level", "INFO")
