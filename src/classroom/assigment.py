@@ -25,23 +25,17 @@ def _get_course(organization, year, semester, course):
     )
 
 
-def assignment(organization, year, semester, course, template, name, private, clone, user):
+def assignment(organization, year, semester, course, template, name, private, user):
     specified_course = _get_course(organization, year, semester, course)
 
-    if user and not (template or clone):
-        raise ValueError("--user can only be used when creating or cloning an assignment")
+    if user and not template:
+        raise ValueError("--user can only be used when creating an assignment")
     
     if private and not template:
         raise ValueError("--private can only be used when creating an assignment")
 
-    if clone and not name:
-        raise ValueError("--clone requires an assignment name")
-
     if template:
         return _create_assignment(specified_course, template, name, private, user)
-
-    if clone:
-        return _clone_assignment(specified_course, name, clone)
 
     if name:
         return _show_assignment(specified_course, name)
@@ -257,8 +251,8 @@ def _show_assignments(course):
 
     for assignment in sorted(assignments):
         logging.info(f"{assignment} ({assignments[assignment]} repositories)")
-        
-def _clone_assignment(course, name, path):
+
+def _clone_assignment(course, name, path, users):
     pass
 
 
