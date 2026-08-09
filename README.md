@@ -1,4 +1,3 @@
-```markdown
 # Classroom
 
 GitHub course administration tool for managing courses and assignments in a teaching organization.
@@ -684,4 +683,3 @@ Classroom es software libre distribuido bajo los términos de la **GNU General P
 El software puede utilizarse, copiarse, modificarse y redistribuirse libremente. Si se redistribuye una versión modificada, el trabajo resultante debe mantenerse disponible bajo GPLv3 y su código fuente correspondiente debe estar disponible bajo los términos de la licencia.
 
 Ver el archivo [`LICENSE`](LICENSE) para consultar el texto completo de la licencia.
-```
