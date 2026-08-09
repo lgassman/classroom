@@ -175,13 +175,80 @@ def _create_feedback_pull_request(orga, name, default_branch):
         logging.info(f"Feedback pull request in repository '{name}' probably already exists")
     else:
         logging.info(f"Created feedback pull request in repository '{name}': {response.status_code}")
-        
+
+INITIAL_COMMITS = 2        
+def _show_assignment(course, name):
+    prefix = f"{course.name}-{name}-"
+    repositories = _find_assignment_repositories(course.organization, prefix)
+    students = {student["login"] for student in find_team(course.organization, course.name) if 'login' in student}
+
+    missing_students = set(students)
+    no_commits = set()
+
+    logging.info(f"Assignment '{name}'")
+    logging.info("---")
+
+    for repository in repositories:
+        username = repository["name"][len(prefix):]
+        is_student = username in students
+        commits = _count_repository_commits(course.organization, repository) - INITIAL_COMMITS
+
+        if is_student:
+            missing_students.discard(username)
+            if commits == 0:
+                no_commits.add(username)
+
+        logging.info(
+            f"{repository['name']}: "
+            f"{'student' if is_student else 'not a student'}, "
+            f"{commits} commits"
+        )
+
+    logging.info("---")
+
+    if missing_students:
+        logging.info(f"Students without a repository: {len(missing_students)}")
+        for username in sorted(missing_students):
+            logging.info(f"- {username}")
+    else:
+        logging.info("All students have a repository")
+
+    if no_commits:
+        logging.info(f"Students without commits: {len(no_commits)}")
+        for username in sorted(no_commits):
+            logging.info(f"- {username}")
+    else:
+        logging.info("All students have commits")
+
+
+def _find_assignment_repositories(orga, prefix):
+    response = request(
+        "GET",
+        "https://api.github.com/search/repositories",
+        params={"q": f"org:{orga} {prefix} in:name", "per_page": 100},
+    )
+
+    return [
+        repository
+        for repository in response.json()["items"]
+        if repository["name"].startswith(prefix)
+    ]
+
+
+def _count_repository_commits(orga, repository):
+    response = request(
+        "GET",
+        f"https://api.github.com/repos/{orga}/{repository['name']}/commits",
+        params={"sha": repository["default_branch"], "per_page": 100},
+    )
+
+    return len(response.json())
+
+
 def _clone_assignment(course, name, path):
     pass
 
 
-def _show_assignment(course, name):
-    pass
 
 
 def _show_assignments(course):
