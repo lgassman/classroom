@@ -6,6 +6,7 @@ from .whoami import whoami
 from .course import course
 from .config import config
 import logging
+from .assigment import assignment
 
 import textwrap
 
@@ -33,7 +34,15 @@ def main():
         .add_argument("--unset", action="store_true", help="Clear the current course")
         .add_argument("--untrack", action="store_true", help="Remove the course from the local configuration")
         .add_argument("roster", nargs="?", type=line_file, help="Path to a file containing GitHub student accounts, one account per line"))
-
+    (builder.addCommand(assignment, help="Handle an assignment", epilog=_assignment_epilog())
+        .add_argument("--organization", "-o", help="GitHub organization name")
+        .add_argument("--year", "-y", help="Academic year")
+        .add_argument("--semester", "-s", help="Academic semester")
+        .add_argument("--course", "-c", help="Course section number")
+        .add_argument("--template", "-t", help="GitHub template repository URL")
+        .add_argument("--name", "-n", help="Assignment name")
+        .add_argument("--private", action="store_true", help="Create private repositories")
+        .add_argument("--clone", metavar="PATH", help="Clone assignment repositories to PATH"))
     builder.run()
 
 def _client_epilog():
@@ -91,6 +100,50 @@ def _course_epilog():
                 classroom course -o obj1unq -y 2026 -s 1 -c 1 --untrack
         """)
 
+def _assignment_epilog():
+    return """
+    Assignment examples:
+
+    Create an assignment in the current course:
+        classroom assignment -t https://github.com/obj1unq/tp1-template
+
+    Create an assignment for a specific course:
+        classroom assignment -o obj1unq -y 2026 -s 2 -c 4 -t https://github.com/obj1unq/tp1-template
+
+    Create an assignment with a custom name in the current course:
+        classroom assignment -t https://github.com/obj1unq/tp1-template -n first-assignment
+
+    Create an assignment with private repositories in the current course:
+        classroom assignment -t https://github.com/obj1unq/tp1-template --private
+
+    List all assignments in the current course:
+        classroom assignment
+
+    List all assignments for a specific course:
+        classroom assignment -o obj1unq -y 2026 -s 2 -c 4
+
+    List repositories for an assignment in the current course:
+        classroom assignment -n tp1
+
+    List repositories for an assignment in a specific course:
+        classroom assignment -o obj1unq -y 2026 -s 2 -c 4 -n tp1
+
+    Clone an assignment from the current course:
+        classroom assignment -n tp1 --clone ~/assignments
+
+    Clone an assignment from a specific course:
+        classroom assignment -o obj1unq -y 2026 -s 2 -c 4 -n tp1 --clone ~/assignments
+
+    If no course is specified, the current course is used.
+
+    Without --template, the command only queries existing assignments
+    and repositories. The --name option selects a specific assignment.
+
+    When --clone is specified, repositories are cloned under:
+        <path>/<course>/<assignment>/<student>
+
+    Existing repositories are updated with git pull.
+    """
 def configure_logging():
     #TODO algun dia voy a hacer el comando para configurar el log
     level_name = config.get("log_level", "INFO")
