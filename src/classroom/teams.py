@@ -1,5 +1,5 @@
 from .secrets import login_key
-import requests
+from .requests import request
 import logging
 from requests.exceptions import HTTPError 
 
@@ -19,30 +19,17 @@ def validate_team_name(name):
         raise ValueError("Team name must be lowercase")
 
     if not re.fullmatch(r"[a-z0-9-]+", name):
-        raise ValueError(
-            "Team name can only contain lowercase letters, numbers and hyphens"
-        )
+        raise ValueError("Team name can only contain lowercase letters, numbers and hyphens")
 
 def create_github_team(orga, name, users):
     validate_team_name(name)
-    response = requests.post(
-        teams_endpoint(orga),
-        json={
-            "name": name,
-        },
-        headers=login_key.headers(),
-    )
+    response = request("POST",teams_endpoint(orga),json={"name": name},headers=login_key.headers())
 
-    if response.status_code != 201:
-        raise RuntimeError(
-            f"Could not create team '{name}': "
-            f"{response.status_code} {response.text}"
-        )
+    if response.status_code == 422:
+        logging.info(f"Team '{name}' probably already exists")
+    else:
+        logging.info(f"Team '{name}' created successfully")
 
-    team = response.json()
-    team_slug = team["slug"]
-
-    logging.debug(f"Created team: {name}")
     add_members_to_team(orga, name, users)
 
 def add_members_to_team(orga, name, users):
@@ -50,17 +37,17 @@ def add_members_to_team(orga, name, users):
     errors = []
 
     for username in users:
-        if add_member_to_team(orga, name, username):
+        try:
+            add_member_to_team(orga, name, username)
             success += 1
-        else:
-            errors.append(username)
+        except HTTPError as e:
+          errors.append(f"{username} {e.response.status_code} {e.response.text}")
 
     logging.info(f"Added members: {success}")
 
     if errors:
         logging.error(f"Failed to add {len(errors)} user{'s' if len(errors) != 1 else ''} to the team: {', '.join(errors)}")
 
-    return success, errors
 
 
 def remove_members_from_team(orga, name, users):
@@ -68,46 +55,33 @@ def remove_members_from_team(orga, name, users):
     errors = []
 
     for username in users:
-        if remove_member_from_team(orga, name, username):
+        try:
+            remove_member_from_team(orga, name, username)
             success += 1
-        else:
-            errors.append(username)
+        except HTTPError as e:
+          errors.append(f"{username} {e.response.status_code} {e.response.text}")
 
     logging.info(f"Removed members: {success}")
 
     if errors:
         logging.error(f"Failed to remove {len(errors)} user{'s' if len(errors) != 1 else ''} from the team: {', '.join(errors)}")
 
-    return success, errors
     
 def add_member_to_team(orga, name, username):
-    response = requests.put(
-        membership_endpoint(orga, name, username),
-        json={
-            "role": "member",
-        },
-        headers=login_key.headers(),
-    )
+    response = request("PUT", membership_endpoint(orga, name, username), json={"role": "member"}, headers=login_key.headers())
 
-    if response.status_code not in (200, 201):
-        logging.warning(f"Could not add user '{username}' to team '{name}'. {response.status_code} {response.text}")
-        return False
+    if response.status_code == 422:
+        logging.warning(f"User '{username}' probably already belongs to team '{name}'")
     else:
-        logging.info(f"Added user: {username}")
-        return True
-    
+        logging.info(f"Added user '{username}' to team '{name}'")
+
 def remove_member_from_team(orga, name, username):
-    response = requests.delete(
-        membership_endpoint(orga, name, username),
-        headers=login_key.headers(),
-    )
+    response = request("DELETE", membership_endpoint(orga, name, username), headers=login_key.headers())
 
-    if response.status_code != 204:
-        logging.warning(f"Could not remove user '{username}' from team '{name}'. {response.status_code} {response.text}")
-        return False
+    if response.status_code == 422:
+        logging.warning(f"User '{username}' probably does not belong to team '{name}'")
     else:
-        logging.info(f"Removed user: {username}")
-        return True
+        logging.info(f"Removed user '{username}' from team '{name}'")
 
 def show_team(orga, name):
     try:
@@ -124,10 +98,7 @@ def show_team(orga, name):
             raise
 
 def delete_team(orga, name):
-    response = requests.delete(
-        team_endpoint(orga, name),
-        headers=login_key.headers(),
-    )
+    response = request("DELETE",team_endpoint(orga, name),headers=login_key.headers())
     response.raise_for_status()
 
 def find_team(orga, name, per_page=100):
@@ -136,16 +107,12 @@ def find_team(orga, name, per_page=100):
     page = 1
 
     while True:
-        response = requests.get(
-            f"{team_endpoint(orga, name)}/members",
+        response = request("GET",f"{team_endpoint(orga, name)}/members",
             params={
                 "page": page,
                 "per_page": per_page,
-            },
-            headers=login_key.headers(),
+            }
         )
-
-        response.raise_for_status()
 
         yield from response.json()
 
@@ -154,14 +121,9 @@ def find_team(orga, name, per_page=100):
 
         page += 1
 
-import logging
-
 
 def update_github_team(orga, name, final_members):
-    current = {
-        member["login"]
-        for member in find_team(orga, name)
-    }
+    current = {member["login"] for member in find_team(orga, name)}
 
     desired = set(final_members)
 

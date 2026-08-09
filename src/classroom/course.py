@@ -88,8 +88,12 @@ def _set_current_course(course):
     tracked.add_if_missing(course)
 
 def _unset_current_course():
-    logging.info(f"Unsetting course {course}")
-    current.delete()
+    course = current.get()
+    if course:
+        logging.info(f"Unsetting current course '{course}'")
+        current.delete()
+    else:
+        logging.warning("There is no current course")
 
 def _untrack_course(course):
     logging.info(f"Untrucking course {course}")

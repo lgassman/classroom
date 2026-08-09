@@ -21,10 +21,13 @@ class Key:
 
 class AuthKey(Key):
     def headers(self):
-        return {
-            "Authorization": f"Bearer {self.get()}",
-            "Accept": "application/vnd.github+json",
-        }
+        try:
+            return {
+                "Authorization": f"Bearer {self.get()}",
+                "Accept": "application/vnd.github+json",
+            }
+        except RuntimeError:
+            raise RuntimeError("You are not logged in. Run the 'login' command first.")
 
 
 client_key = Key("client_secret", "The client secret is not configured. please run `client <client_key> <client_secret>` command")

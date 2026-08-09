@@ -1,20 +1,12 @@
-import requests
+from .requests import request
 
 from .secrets import login_key
 import logging
 
 def whoami_response():
-    return requests.get(
-        "https://api.github.com/user",
-        headers=login_key.headers()
-    )
+    return request("GET","https://api.github.com/user")
 
 def print_whoami(response):
-    if response.status_code == 401:
-        logging.warning("Stored token is no longer valid.")
-        return
-
-    response.raise_for_status()
 
     user = response.json()
 
