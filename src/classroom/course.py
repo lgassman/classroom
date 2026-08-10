@@ -16,6 +16,18 @@ def _specified_course(organization, year, semester, course):
         raise ValueError("Organization, year, semester and course must be specified together")
     return Course(organization, year, semester, course) if course_specified else None
 
+def _raise_no_exist():
+    raise ValueError(
+    "A course must be specified or a current course must exist. "
+    "Specify a course with --organization, --year, --semester and --course, "
+    "or set a current course with 'classroom course --set-current'."
+)
+
+def specified_course_or_current(organization, year, semester, course):
+    return _specified_course(organization, year, semester, course) or current.get() or _raise_no_exist()
+
+
+
 def _validate_just_one_action(update, delete, set_current, unset, untrack):
     if sum([update, delete, set_current, unset, untrack]) > 1:
         raise ValueError("Course actions are mutually exclusive")

@@ -1,32 +1,15 @@
-from .course import _specified_course, current
-import logging
+from .course import  specified_course_or_current
 from .requests import request
 from requests import HTTPError
 
 from .models import RepoTemplate
 from .secrets import login_key
-from .teams import find_team
-
-
-
-def _get_course(organization, year, semester, course):
-    specified_course = _specified_course(organization, year, semester, course)
-    if specified_course:
-        return specified_course
-
-    current_course = current.get()
-    if current_course:
-        return current_course
-
-    raise ValueError(
-        "A course must be specified or a current course must exist. "
-        "Specify a course with --organization, --year, --semester and --course, "
-        "or set a current course with 'classroom course --set-current'."
-    )
+from .teams import find_team_members
+import logging
 
 
 def assignment(organization, year, semester, course, template, name, private, user):
-    specified_course = _get_course(organization, year, semester, course)
+    specified_course = specified_course_or_current(organization, year, semester, course)
 
     if user and not template:
         raise ValueError("--user can only be used when creating an assignment")
@@ -44,8 +27,8 @@ def assignment(organization, year, semester, course, template, name, private, us
 
 def _get_assignment_users(course, users):
     if users:
-        return ({"login": username} for username in users)
-    return find_team(course.organization, course.name)
+        return ({"login": username.lower()} for username in users)
+    return find_team_members(course.organization, course.name)
 
 def _create_assignment(course, template, name, private, users):
     template = RepoTemplate.from_str(template, private=private)
@@ -59,9 +42,10 @@ def _create_assignment(course, template, name, private, users):
 
     for person in _get_assignment_users(course, users):
         try:
-            logging.info(f"Working with {person['login']}")
-            repository_name = f"{course.name}_{name}_{person['login']}"
-            _create_assignment_repository(course.organization, repository_name, template, person["login"])
+            user_name = person['login'].lower()
+            logging.info(f"Working with {user_name}")
+            repository_name = f"{course.name}_{name}_{user_name}"
+            _create_assignment_repository(course.organization, repository_name, template, user_name)
             success += 1
         except KeyError as e:
             if e.args[0] == "login":
@@ -174,7 +158,7 @@ INITIAL_COMMITS = 2
 def _show_assignment(course, name):
     prefix = f"{course.name}_{name}_"
     repositories = _find_assignment_repositories(course.organization, prefix)
-    students = {student["login"] for student in find_team(course.organization, course.name) if 'login' in student}
+    students = {student["login"].lower() for student in find_team_members(course.organization, course.name) if 'login' in student}
 
     missing_students = set(students)
     no_commits = set()
@@ -251,8 +235,5 @@ def _show_assignments(course):
 
     for assignment in sorted(assignments):
         logging.info(f"{assignment} ({assignments[assignment]} repositories)")
-
-def _clone_assignment(course, name, path, users):
-    pass
 
 

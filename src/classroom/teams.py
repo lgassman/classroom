@@ -16,10 +16,10 @@ def team_endpoint(orga, name):
 
 def validate_team_name(name):
     if name != name.lower():
-        raise ValueError("Team name must be lowercase")
+        raise ValueError(f"Team name must be lowercase: team: {name}")
 
     if not re.fullmatch(r"[a-z0-9-]+", name):
-        raise ValueError("Team name can only contain lowercase letters, numbers and hyphens")
+        raise ValueError(f"Team name can only contain lowercase letters, numbers and hyphens. team:{name}")
 
 def create_github_team(orga, name, users):
     validate_team_name(name)
@@ -38,7 +38,7 @@ def add_members_to_team(orga, name, users):
 
     for username in users:
         try:
-            add_member_to_team(orga, name, username)
+            add_member_to_team(orga, name, username.lower())
             success += 1
         except HTTPError as e:
           errors.append(f"{username} {e.response.status_code} {e.response.text}")
@@ -85,7 +85,7 @@ def remove_member_from_team(orga, name, username):
 
 def show_team(orga, name):
     try:
-        users = find_team(orga, name)
+        users = find_team_members(orga, name)
         _size = 0
         for user in users:
             logging.info(f"{user['login']} {user.get('html_url')}")
@@ -101,7 +101,7 @@ def delete_team(orga, name):
     response = request("DELETE",team_endpoint(orga, name),headers=login_key.headers())
     response.raise_for_status()
 
-def find_team(orga, name, per_page=100):
+def find_team_members(orga, name, per_page=100):
     validate_team_name(name)
 
     page = 1
@@ -123,9 +123,9 @@ def find_team(orga, name, per_page=100):
 
 
 def update_github_team(orga, name, final_members):
-    current = {member["login"] for member in find_team(orga, name)}
+    current = {member["login"].lower() for member in find_team_members(orga, name)}
 
-    desired = set(final_members)
+    desired = {member.lower() for member in final_members}
 
     to_add = desired - current
     to_remove = current - desired
@@ -135,5 +135,18 @@ def update_github_team(orga, name, final_members):
         add_members_to_team(orga, name, sorted(to_add))
     if to_remove:
         remove_members_from_team(orga, name, sorted(to_remove))
+
+def find_teams(orga, prefix, per_page=100):
+    page = 1
+
+    while True:
+        response = request("GET",teams_endpoint(orga),params={"page": page, "per_page": per_page})
+
+        yield from (team for team in response.json() if team["slug"].startswith(prefix))
+
+        if "next" not in response.links:
+            break
+
+        page += 1
 
     
