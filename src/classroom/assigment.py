@@ -177,7 +177,7 @@ def _show_assignment(course, name):
                 no_commits.add(username)
 
         logging.info(
-            f"{repository['name']}: "
+            f"{repository['html_url']}: "
             f"{'student' if is_student else 'not a student'}, "
             f"{commits} commits"
         )
