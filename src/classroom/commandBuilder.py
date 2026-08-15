@@ -1,6 +1,8 @@
+from __future__ import annotations #Para compatibilidad con 3.10
 import inspect
 import argparse
 import logging
+
        
 class CommandBuilder() :
     def __init__(self, prog = "classroom", description= "GitHub course administration tool", **args):

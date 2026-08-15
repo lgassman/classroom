@@ -11,8 +11,6 @@ from .groups import groups
 
 import textwrap
 
-
-
 def main():
     configure_logging()
     builder = CommandBuilder()
