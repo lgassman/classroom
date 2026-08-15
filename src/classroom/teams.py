@@ -99,7 +99,7 @@ def _show_team_members(orga, name):
 
 def show_pending_members(orga, name):  
     try:
-        logging.info(f"Pending members of {orga}-{name}")
+        logging.info(f"Pending members of {name}")
         _size = 0
         for _size, user in enumerate(find_team_pending_members(orga, name), 1):
             logging.info(f"{user.get('login') or user.get('email')} (pending)")

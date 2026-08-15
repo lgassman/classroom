@@ -162,6 +162,7 @@ def _show_assignment(course, name):
 
     missing_students = set(students)
     no_commits = set()
+    non_students=set()
 
     logging.info(f"Assignment '{name}'")
     logging.info("---")
@@ -175,10 +176,12 @@ def _show_assignment(course, name):
             missing_students.discard(username)
             if commits == 0:
                 no_commits.add(username)
+        else:
+            non_students.add(username)
 
         logging.info(
             f"{repository['html_url']}: "
-            f"{'student' if is_student else 'not a student'}, "
+            f"{'student' if is_student else 'non-student'}, "
             f"{commits} commits"
         )
 
@@ -190,7 +193,13 @@ def _show_assignment(course, name):
         for username in sorted(missing_students):
             logging.info(f"- {username}")
     else:
-        logging.info(f"All active students({len(students)}) have a repository")
+        logging.info(f"All active students have a repository ({len(students)})")
+
+    if non_students: 
+        logging.info(f"Non-student members: {len(non_students)}")
+        for non_student in non_students:
+            logging.info(f"- {non_student}")
+
 
     if no_commits:
         logging.info(f"Students without commits: {len(no_commits)}")
