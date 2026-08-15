@@ -4,15 +4,13 @@ from.client import client
 from .logout import logout
 from .whoami import whoami
 from .course import course
-from .config import config
-import logging
 from .assigment import assignment
 from .groups import groups
 
 import textwrap
 
+  
 def main():
-    configure_logging()
     builder = CommandBuilder()
     (builder.addCommand(client, help="Handle GitHub client id and secret (set/get/delete)", epilog=_client_epilog())
         .add_argument("id", nargs="?", help="The github client id") \
@@ -199,17 +197,8 @@ def _assignment_epilog():
 
         """)
 
-def configure_logging():
-    #TODO algun dia voy a hacer el comando para configurar el log
-    level_name = config.get("log_level", "INFO")
-    log_format = config.get("log_format", "%(levelname)s: %(message)s")
 
-    level = getattr(logging, level_name.upper(), logging.INFO)
 
-    logging.basicConfig(
-        level=level,
-        format=log_format,
-    )
 
 if __name__ == "__main__":
     raise SystemExit(main())

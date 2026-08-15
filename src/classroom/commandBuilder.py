@@ -2,11 +2,13 @@ from __future__ import annotations #Para compatibilidad con 3.10
 import inspect
 import argparse
 import logging
+from .config import config
 
-       
+
 class CommandBuilder() :
     def __init__(self, prog = "classroom", description= "GitHub course administration tool", **args):
         self.parser = argparse.ArgumentParser(prog=prog, description=description, formatter_class=argparse.RawDescriptionHelpFormatter, **args)
+        self.parser.add_argument("--log", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
         self.subparsers = self.parser.add_subparsers(dest="command",required=True)
 
     def addCommand(self, handler, **args)->SubCommandBuilder: 
@@ -15,6 +17,7 @@ class CommandBuilder() :
     def run(self):
         try:
             args = self.parser.parse_args()
+            configure_logging(log_level=args.log)
             sig = inspect.signature(args.run)
 
             kwargs = {
@@ -61,3 +64,24 @@ def line_file(path):
         raise ValueError(f"Not a file: {path}")
 
     return path.read_text(encoding="utf-8").strip().splitlines()
+
+#Esto suena a una hackeada que tengo que repensar. la unica salida que estoy escribiendo 
+#es por log, eso hace que el INFO se le remueva el header para que parezca stdout, pero 
+#sigue siendo stderr. Quizás debería cambiar todos los logging.info por print
+class ClassroomFormatter(logging.Formatter):
+    def format(self, record):
+        if record.levelno == logging.INFO:
+            return record.getMessage()
+        return super().format(record)
+
+
+def configure_logging(log_level = None):
+    level_name = log_level or config.get("log_level", "INFO")
+    log_format = config.get("log_format", "%(levelname)s: %(message)s")
+
+    level = getattr(logging, level_name.upper(), logging.INFO)
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(ClassroomFormatter(log_format))
+
+    logging.basicConfig(level=level, handlers=[handler])
