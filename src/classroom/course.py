@@ -1,5 +1,5 @@
 from .models import Course, ModelSerializer
-from .teams import create_github_team, show_team, delete_team, update_github_team
+from .teams import create_github_team, show_team, delete_team, update_github_team, show_pending_members
 from .config import ListConfig, Config
 import logging 
 
@@ -92,6 +92,9 @@ def _delete_course(course):
 def _show_course(course):
     logging.info(f"Showing course {course}")
     show_team(course.organization, course.name)
+
+def show_pending_students(course):
+    show_pending_members(course.organization, course.name)
 
 
 def _set_current_course(course):

@@ -9,6 +9,18 @@ from .secrets import login_key
 _MAX_RETRIES = 3
 
 
+def paginated_request(method, url, **kwargs):
+    page = 1
+    per_page=50
+    params = kwargs.pop("params", {})
+    while True:
+        response = request(method, url,params={"page": page,"per_page": per_page,**params},**kwargs)
+
+        yield from response.json()
+
+        if "next" not in response.links:
+            break
+        page +=1
 
 def request(method, url, retries=_MAX_RETRIES, **kwargs):
     method = method.upper()

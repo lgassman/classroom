@@ -1,5 +1,5 @@
 from .secrets import login_key
-from .requests import request
+from .requests import request, paginated_request
 import logging
 from requests.exceptions import HTTPError 
 
@@ -83,13 +83,13 @@ def remove_member_from_team(orga, name, username):
     else:
         logging.info(f"Removed user '{username}' from team '{name}'")
 
-def show_team(orga, name):
+
+def _show_team_members(orga, name):
     try:
-        users = find_team_members(orga, name)
+        logging.info(f"Members of {orga}-{name}")
         _size = 0
-        for user in users:
+        for _size, user in enumerate(find_team_members(orga, name), 1):
             logging.info(f"{user['login']} {user.get('html_url')}")
-            _size += 1
         logging.info(f"size {_size}")
     except HTTPError as e:
         if e.response.status_code == 404:
@@ -97,30 +97,35 @@ def show_team(orga, name):
         else:
             raise
 
+def show_pending_members(orga, name):  
+    try:
+        logging.info(f"Pending members of {orga}-{name}")
+        _size = 0
+        for _size, user in enumerate(find_team_pending_members(orga, name), 1):
+            logging.info(f"{user.get('login') or user.get('email')} (pending)")
+        logging.info(f"size {_size}")
+    except HTTPError as e:
+        if e.response.status_code == 404:
+            logging.info(f"GitHub team '{name}' does not exist.")
+        else:
+            raise
+
+def find_team_pending_members(orga, name):
+    validate_team_name(name)
+    yield from paginated_request("GET", f"{team_endpoint(orga, name)}/invitations")    
+
+
+def show_team(orga, name):
+    _show_team_members(orga, name)
+    _show_pending_members(orga, name)
+
 def delete_team(orga, name):
     response = request("DELETE",team_endpoint(orga, name),headers=login_key.headers())
     response.raise_for_status()
 
-def find_team_members(orga, name, per_page=100):
+def find_team_members(orga, name):
     validate_team_name(name)
-
-    page = 1
-
-    while True:
-        response = request("GET",f"{team_endpoint(orga, name)}/members",
-            params={
-                "page": page,
-                "per_page": per_page,
-            }
-        )
-
-        yield from response.json()
-
-        if "next" not in response.links:
-            break
-
-        page += 1
-
+    yield from paginated_request("GET", f"{team_endpoint(orga, name)}/members")
 
 def update_github_team(orga, name, final_members):
     current = {member["login"].lower() for member in find_team_members(orga, name)}
@@ -136,17 +141,7 @@ def update_github_team(orga, name, final_members):
     if to_remove:
         remove_members_from_team(orga, name, sorted(to_remove))
 
-def find_teams(orga, prefix, per_page=100):
-    page = 1
+def find_teams(orga, prefix):
+    teams = paginated_request("GET", teams_endpoint(orga))
+    yield from (team for team in teams if team["slug"].startswith(prefix))
 
-    while True:
-        response = request("GET",teams_endpoint(orga),params={"page": page, "per_page": per_page})
-
-        yield from (team for team in response.json() if team["slug"].startswith(prefix))
-
-        if "next" not in response.links:
-            break
-
-        page += 1
-
-    

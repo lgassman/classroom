@@ -1,6 +1,7 @@
 from .course import  specified_course_or_current
 from .teams import update_github_team, create_github_team, delete_team, find_teams, find_team_members
 import logging
+from collections.abc import Iterator
 
 def groups(organization, year, semester, course, grouping, delete, roster):
     if roster and delete:
@@ -35,11 +36,9 @@ def _create_or_update_groups(course, grouping, roster):
             create_github_team(course.organization, name, sorted(users))
 
 
-def _find_groups(course, grouping) :
+def _find_groups(course, grouping)-> Iterator[tuple[str, dict]]:
     prefix = f"{course.name}-{grouping}-"
-
-    for team in find_teams(course.organization, prefix):
-        yield team["slug"], team
+    yield from ((team["slug"], team) for team in find_teams(course.organization, prefix))
 
 
 def _delete_groups(course, grouping):

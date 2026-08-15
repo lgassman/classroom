@@ -1,4 +1,4 @@
-from .course import  specified_course_or_current
+from .course import  specified_course_or_current, show_pending_students
 from .requests import request
 from requests import HTTPError
 
@@ -185,11 +185,12 @@ def _show_assignment(course, name):
     logging.info("---")
 
     if missing_students:
+        logging.info(f"Only ({len(students)-len(missing_students)}) have a repository")
         logging.info(f"Students without a repository: {len(missing_students)}")
         for username in sorted(missing_students):
             logging.info(f"- {username}")
     else:
-        logging.info("All students have a repository")
+        logging.info(f"All active students({len(students)}) have a repository")
 
     if no_commits:
         logging.info(f"Students without commits: {len(no_commits)}")
@@ -197,6 +198,8 @@ def _show_assignment(course, name):
             logging.info(f"- {username}")
     else:
         logging.info("All students have commits")
+
+    show_pending_students(course)
 
 
 def _find_assignment_repositories(orga, prefix):
