@@ -8,6 +8,7 @@ from .assigment import assignment
 from .groups import groups
 
 import textwrap
+DEFAULT_GROUPING = "group"
 
   
 def main():
@@ -40,13 +41,13 @@ def main():
         .add_argument("--name", "-n", help="Assignment name")
         .add_argument("--private", action="store_true", help="Create private repositories")
         .add_argument("--user", "-u", nargs="+", help="GitHub usernames to process instead of the course students. Useful for teachers")
-        .add_argument("--group", nargs="?", const="groups", help="Create group repositories, optionally specifying the grouping"))
+        .add_argument("--group", nargs="?", const=DEFAULT_GROUPING, help="Create group repositories, optionally specifying the grouping"))
     (builder.addCommand(groups,help="Handle the groups of a course",epilog=_groups_epilog())
         .add_argument("--organization", "-o", help="GitHub organization name")
         .add_argument("--year", "-y", help="Academic year")
         .add_argument("--semester", "-s", help="Academic semester")
         .add_argument("--course", "-c", help="Course section number")
-        .add_argument("--grouping", "-g", default="group", help="Group grouping name. Useful for using different sets of students for different assignments")
+        .add_argument("--grouping", "-g", default=DEFAULT_GROUPING, help="Group grouping name. Useful for using different sets of students for different assignments")
         .add_argument("--delete", action="store_true", help="Delete all groups in the grouping")
         .add_argument("--list-groupings", "-l", action="store_true", help="List groupings of the course")
         .add_argument("roster",nargs="?",type=line_file,help="Path to a file containing GitHub usernames, one group per line with users separated by spaces",

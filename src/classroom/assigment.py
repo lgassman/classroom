@@ -8,6 +8,7 @@ from .course import show_pending_students, specified_course_or_current
 from .models import RepoTemplate
 from .requests import request
 from .teams import find_team_members, find_teams
+from .groups import find_groupings
 
 
 FEEDBACK_COMMIT_MESSAGE = "Initial feedback commit"
@@ -48,7 +49,7 @@ class RepoCreator(ABC):
 
     def create(self):
         self._create_repository()
-        self._add_access()
+        self.add_access()
         self._create_feedback_branch()
         commit_sha = self._create_feedback_commit()
         self._update_default_branch(commit_sha)
@@ -208,14 +209,28 @@ def _create_assignment(course, template, name, private, users, grouping):
 
 def _get_assignment_creators(course, users, grouping, template, name) -> Iterator[RepoCreator]:
     if grouping:
+        found = False
+
         for _, group in _find_groups(course, grouping):
-            yield GroupRepoCreator(course.organization, template, course, name, group)
+            found = True
+            yield GroupRepoCreator(course, template, name, group)
+
+        if not found:
+            raise ValueError(f"Grouping '{grouping}' does not exist in course '{course.name}'")
+
         return
 
     users = ({"login": username} for username in users) if users else find_team_members(course.organization, course.name)
 
+    found = False
+
     for user in users:
-        yield IndividualRepoCreator(course.organization, template, course, name, user)
+        found = True
+        yield IndividualRepoCreator(course, template, name, user)
+
+    if not found:
+        raise ValueError(f"No users found for assignment in course '{course.name}'")
+
 
 def _find_groups(course, grouping) -> Iterator[tuple[str, dict]]:
     prefix = f"{course.name}-{grouping}-"
@@ -230,19 +245,30 @@ def _find_default_branch(template):
 def _show_assignment(course, name):
     prefix = f"{course.name}_{name}_"
     repositories = _find_assignment_repositories(course.organization, prefix)
-    students = {student["login"].lower() for student in find_team_members(course.organization, course.name) if "login" in student}
+    students = {student["login"].lower() for student in find_team_members(course.organization, course.name)}
+    groupings = set(find_groupings(course))
 
     missing_students = set(students)
     no_commits = set()
     non_students = set()
+    groups = {}
 
     logging.info(f"Assignment '{name}'")
     logging.info("---")
 
     for repository in repositories:
-        username = repository["name"][len(prefix):]
-        is_student = username in students
+        suffix = repository["name"][len(prefix):]
         commits = _count_repository_commits(course.organization, repository) - INITIAL_COMMITS
+
+        group = next((grouping for grouping in groupings if suffix.startswith(f"{grouping}-")), None)
+
+        if group:
+            groups[suffix] = commits
+            logging.info(f"{repository['html_url']}: group {suffix}, {commits} commits")
+            continue
+
+        username = suffix
+        is_student = username in students
 
         if is_student:
             missing_students.discard(username)
@@ -255,13 +281,20 @@ def _show_assignment(course, name):
 
     logging.info("---")
 
-    if missing_students:
-        logging.info(f"Only ({len(students) - len(missing_students)}) have a repository")
+    if groups:
+        logging.info(f"Groups: {len(groups)}")
+        for group, commits in sorted(groups.items()):
+            logging.info(f"- {group}: {commits} commits")
+
+    if missing_students and not groups:
         logging.info(f"Students without a repository: {len(missing_students)}")
         for username in sorted(missing_students):
             logging.info(f"- {username}")
-    else:
-        logging.info(f"All active students have a repository ({len(students)})")
+
+    elif missing_students:
+        logging.info(f"Students without a repository: {len(missing_students)}")
+        for username in sorted(missing_students):
+            logging.info(f"- {username}")
 
     if non_students:
         logging.info(f"Non-student members: {len(non_students)}")
@@ -272,11 +305,11 @@ def _show_assignment(course, name):
         logging.info(f"Students without commits: {len(no_commits)}")
         for username in sorted(no_commits):
             logging.info(f"- {username}")
-    else:
+    elif students and not groups:
         logging.info("All students have commits")
 
-    show_pending_students(course)
-
+    if not groups:
+        show_pending_students(course)
 
 def _find_assignment_repositories(orga, prefix):
     response = request("GET", "https://api.github.com/search/repositories", params={"q": f"org:{orga} {prefix} in:name", "per_page": 100})
