@@ -131,7 +131,7 @@ class IndividualRepoCreator(RepoCreator):
         return self.user['login']
 
     def access_endpoint(self):
-        return f"https://api.github.com/repos/{self.orga}/{self.repository_name()}/collaborators/{self.user["login"]}"
+        return f"https://api.github.com/repos/{self.orga}/{self.repository_name()}/collaborators/{self.user['login']}"
     
 
 
@@ -182,7 +182,7 @@ def _create_assignment(course, template, name, private, users, grouping):
     errors = []
     success = 0
 
-    for creator in _get_assignment_repos(course, users, grouping, template, name):
+    for creator in _get_assignment_creators(course, users, grouping, template, name):
         try:
             logging.info(f"Working with {creator.repository_name()}")
             creator.create()
@@ -206,28 +206,16 @@ def _create_assignment(course, template, name, private, users, grouping):
     for error in errors:
         logging.error(error)
 
-
-def _get_assignment_repos(course, users, grouping, template, name):
+def _get_assignment_creators(course, users, grouping, template, name) -> Iterator[RepoCreator]:
     if grouping:
-        return _get_assignment_groups(course, grouping, template, name)
+        for _, group in _find_groups(course, grouping):
+            yield GroupRepoCreator(course.organization, template, course, name, group)
+        return
 
-    return _get_assignment_users(course, users, template, name)
-
-
-def _get_assignment_users(course, users, template, name) -> Iterator[RepoCreator]:
-    if users:
-        users = ({"login": username.lower()} for username in users)
-    else:
-        users = find_team_members(course.organization, course.name)
+    users = ({"login": username} for username in users) if users else find_team_members(course.organization, course.name)
 
     for user in users:
         yield IndividualRepoCreator(course.organization, template, course, name, user)
-
-
-def _get_assignment_groups(course, grouping, template, name) -> Iterator[RepoCreator]:
-    for group_slug, group in _find_groups(course, grouping):
-        yield GroupRepoCreator(course.organization, template, course, name, group)
-
 
 def _find_groups(course, grouping) -> Iterator[tuple[str, dict]]:
     prefix = f"{course.name}-{grouping}-"

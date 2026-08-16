@@ -3,9 +3,13 @@ from .teams import update_github_team, create_github_team, delete_team, find_tea
 import logging
 from collections.abc import Iterator
 
-def groups(organization, year, semester, course, grouping, delete, roster):
+
+def groups(organization, year, semester, course, grouping, delete, list_groupings, roster):
     if roster and delete:
         raise ValueError("--delete cannot be used together with a roster")
+
+    if list_groupings and (roster or delete):
+        raise ValueError("--list-groupings is incompatible with mutable operations")
 
     _course = specified_course_or_current(organization, year, semester, course)
 
@@ -15,7 +19,23 @@ def groups(organization, year, semester, course, grouping, delete, roster):
     if delete:
         return _delete_groups(_course, grouping)
 
+    if list_groupings:
+        return _list_groupings(_course)
+
     return _show_groups(_course, grouping)
+
+def _list_groupings(course):
+    prefix = f"{course.name}-"
+    groupings = set()
+
+    for team in find_teams(course.organization, prefix):
+        suffix = team["slug"][len(prefix):]
+        grouping = suffix.rsplit("-", 1)[0]
+        groupings.add(grouping)
+
+    for grouping in sorted(groupings):
+        logging.info(grouping)
+
 
 def group_name(course, grouping, number):
     return f"{course.name}-{grouping}-{number}"
@@ -46,17 +66,9 @@ def _delete_groups(course, grouping):
         logging.info(f"Deleting group '{name}'")
         delete_team(course.organization, name)
 
-
-# def _show_groups(course, grouping):
-#     for name, _ in _find_groups(course, grouping):
-#         logging.info(f"Group '{name}':")
-
-#         for member in find_team_members(course.organization, name):
-#             logging.info(f"  - {member['login']}")
-
 def _show_groups(course, grouping):
     for name, _ in _find_groups(course, grouping):
-        logging.info(f"Team: {name}")
+        logging.info(f"Group: {name}")
 
         for member in find_team_members(course.organization, name):
             logging.info(f"    {member['login']}")

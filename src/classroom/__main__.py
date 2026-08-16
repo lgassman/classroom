@@ -48,6 +48,7 @@ def main():
         .add_argument("--course", "-c", help="Course section number")
         .add_argument("--grouping", "-g", default="group", help="Group grouping name. Useful for using different sets of students for different assignments")
         .add_argument("--delete", action="store_true", help="Delete all groups in the grouping")
+        .add_argument("--list-groupings", "-l", action="store_true", help="List groupings of the course")
         .add_argument("roster",nargs="?",type=line_file,help="Path to a file containing GitHub usernames, one group per line with users separated by spaces",
         ))    
     builder.run()

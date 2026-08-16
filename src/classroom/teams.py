@@ -117,7 +117,7 @@ def find_team_pending_members(orga, name):
 
 def show_team(orga, name):
     _show_team_members(orga, name)
-    _show_pending_members(orga, name)
+    show_pending_members(orga, name)
 
 def delete_team(orga, name):
     response = request("DELETE",team_endpoint(orga, name),headers=login_key.headers())
