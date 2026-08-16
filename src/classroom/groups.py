@@ -24,16 +24,19 @@ def groups(organization, year, semester, course, grouping, delete, list_grouping
 
     return _show_groups(_course, grouping)
 
-def _list_groupings(course):
+def find_groupings(course) -> Iterator[str]:
     prefix = f"{course.name}-"
-    groupings = set()
+    seen = set()
 
     for team in find_teams(course.organization, prefix):
-        suffix = team["slug"][len(prefix):]
-        grouping = suffix.rsplit("-", 1)[0]
-        groupings.add(grouping)
+        grouping = team["slug"][len(prefix):].rsplit("-", 1)[0]
+        if grouping not in seen:
+            seen.add(grouping)
+            yield grouping
 
-    for grouping in sorted(groupings):
+def _list_groupings(course):
+
+    for grouping in find_groupings(course):
         logging.info(grouping)
 
 
