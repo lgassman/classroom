@@ -1,3 +1,7 @@
+> **This project has moved to [uqbar-project/uqbar-classroom](https://github.com/uqbar-project/uqbar-classroom).**
+>
+> This repository is no longer maintained. Please use the new repository for the latest version and development.
+> 
 # Classroom
 
 GitHub course administration tool for managing courses and assignments in a teaching organization.
