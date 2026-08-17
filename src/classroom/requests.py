@@ -6,7 +6,7 @@ import requests
 from .secrets import login_key
 
 
-_MAX_RETRIES = 3
+_MAX_RETRIES = 5
 
 
 def paginated_request(method, url, **kwargs):
@@ -62,7 +62,7 @@ def _retry_wait(response, attempt, retries):
     if response.status_code == 403 and response.headers.get("X-RateLimit-Remaining") == "0": #a rate problem
         return _rate_limit_wait(response)
 
-    if response.status_code == 409: #the server is probably still working
+    if response.status_code in {409, 503} : #the server is probably still working or temporarily unavailable
         return 2 ** attempt
 
     return None

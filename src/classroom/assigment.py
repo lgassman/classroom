@@ -7,8 +7,8 @@ from requests import HTTPError
 from .course import show_pending_students, specified_course_or_current
 from .models import RepoTemplate
 from .requests import request
-from .teams import find_team_members, find_teams
-from .groups import find_groupings
+from .teams import find_team_members
+from .groups import find_groupings, find_groups, find_group_members
 
 
 FEEDBACK_COMMIT_MESSAGE = "Initial feedback commit"
@@ -211,7 +211,7 @@ def _get_assignment_creators(course, users, grouping, template, name) -> Iterato
     if grouping:
         found = False
 
-        for _, group in _find_groups(course, grouping):
+        for _, group in find_groups(course, grouping):
             found = True
             yield GroupRepoCreator(course, template, name, group)
 
@@ -232,14 +232,104 @@ def _get_assignment_creators(course, users, grouping, template, name) -> Iterato
         raise ValueError(f"No users found for assignment in course '{course.name}'")
 
 
-def _find_groups(course, grouping) -> Iterator[tuple[str, dict]]:
-    prefix = f"{course.name}-{grouping}-"
-    yield from ((team["slug"], team) for team in find_teams(course.organization, prefix))
-
-
 def _find_default_branch(template):
     response = request("GET", f"https://api.github.com/repos/{template.owner}/{template.name}")
     template.default_branch = response.json()["default_branch"]
+
+
+class AssignmentReporter(ABC):
+    def __init__(self, owners): 
+        """owners maps each owner to a tuple containing repository data."""
+        self.owners = owners
+    
+    @abstractmethod
+    def owners_description(self):
+        pass
+
+    def process_repo_data(self, owner, data):
+        logging.info(self.repo_data_str(owner, data))
+
+    def repo_data_str(self, owner, data):
+        return f"- {owner}, {data[1]}: commits, repo:{data[0]['html_url']}"         
+        
+    def show(self):
+        logging.info("---")
+        logging.info(f"{self.owners_description()} repositories ({len(self.owners)})")
+        for owner, data in self.owners.items():
+            self.process_repo_data(owner, data)
+
+class FollowingAssignmentReporter(AssignmentReporter):
+    #Hace énfasis en quienes no hicieron commits
+    def __init__(self, owners, expected_owners): 
+        super().__init__(owners)
+        self.without_commits = []
+        self._expected_owners = expected_owners
+
+    def process_repo_data(self, owner, data):
+        super().process_repo_data(owner, data)
+        if data[1] == 0:
+            self.without_commits.append(owner)
+
+    def show(self):
+        super().show()
+        if self.without_commits:
+            logging.info(f"{self.owners_description()} without commits:")
+            for owner in self.without_commits:
+                logging.info(f"-{self.name(owner)}")
+
+        missing_owner = self.expected_owners() - self.owners.keys()
+        if missing_owner:
+            logging.info(f"Missing {self.owners_description().lower()}")
+            for owner in missing_owner:
+                logging.info(f"-{self.name(owner)}")
+
+    def name(self, owner):
+        return owner
+
+    def expected_owners(self):
+        return self._expected_owners
+
+class StudentAssignmentReporter(FollowingAssignmentReporter):
+    def __init__(self, owners, expected_owners, course):
+        super().__init__(owners, expected_owners)
+        self.course = course
+
+    def owners_description(self):
+        return "Students"
+
+    def show(self):
+        super().show()
+        show_pending_students(self.course)
+
+
+class NonStudentAssignmentReporter(AssignmentReporter):
+    def owners_description(self):
+        return "Non-students"
+
+class GroupAssignmentReporter(FollowingAssignmentReporter):
+
+    def __init__(self, owners, expected_groups, grouping): 
+        #owners es un dict de owner a una tupla con datos del repositorio
+        #mientras que groups es un diccionario de grupo a miembros
+        #que oficia de expected_owner de la superclase
+        super().__init__(owners, expected_groups)
+        self.grouping = grouping
+
+    def owners_description(self):
+        return f"Grouping {self.grouping}"
+
+    def repo_data_str(self, owner, data):
+        return super().repo_data_str(owner, data) + " members: " + self.members(owner)     
+
+    def members(self,owner):
+        return ",".join(self._expected_owners.get(owner, []))
+    
+    def name(self,owner):
+        return f"{owner} ({self.members(owner)})" 
+
+    def expected_owners(self):
+        return self._expected_owners.keys()
+
 
 
 def _show_assignment(course, name):
@@ -248,68 +338,51 @@ def _show_assignment(course, name):
     students = {student["login"].lower() for student in find_team_members(course.organization, course.name)}
     groupings = set(find_groupings(course))
 
-    missing_students = set(students)
-    no_commits = set()
-    non_students = set()
-    groups = {}
+    student_repositories = {}
+    non_student_repositories = {}
+    group_repositories = {}
 
-    logging.info(f"Assignment '{name}'")
-    logging.info("---")
-
+    logging.debug(f"show assignment for prefix: {prefix}")
     for repository in repositories:
+        logging.debug(f"found {repository['name']}")
         suffix = repository["name"][len(prefix):]
         commits = _count_repository_commits(course.organization, repository) - INITIAL_COMMITS
 
-        group = next((grouping for grouping in groupings if suffix.startswith(f"{grouping}-")), None)
+        grouping, group = next(((grouping, suffix[len(grouping) + 1:]) for grouping in groupings if suffix.startswith(f"{grouping}-")), (None, None))
+        logging.debug(f"grouping: {grouping}, group:{group}")
 
-        if group:
-            groups[suffix] = commits
-            logging.info(f"{repository['html_url']}: group {suffix}, {commits} commits")
-            continue
-
-        username = suffix
-        is_student = username in students
-
-        if is_student:
-            missing_students.discard(username)
-            if commits == 0:
-                no_commits.add(username)
+        if grouping:
+            group_repositories.setdefault(grouping, {})[group] = (repository, commits)
+        elif suffix in students:
+            logging.debug(f"it is a student repo!")
+            student_repositories[suffix]=(repository, commits)
         else:
-            non_students.add(username)
+            logging.debug(f"it is not a student repo!")
+            non_student_repositories[suffix]= (repository, commits)
 
-        logging.info(f"{repository['html_url']}: {'student' if is_student else 'non-student'}, {commits} commits")
+    reporters = []
 
-    logging.info("---")
+    if student_repositories:
+        reporters.append(StudentAssignmentReporter(student_repositories, students, course))
 
-    if groups:
-        logging.info(f"Groups: {len(groups)}")
-        for group, commits in sorted(groups.items()):
-            logging.info(f"- {group}: {commits} commits")
+    if non_student_repositories:
+        reporters.append(NonStudentAssignmentReporter(non_student_repositories))
 
-    if missing_students and not groups:
-        logging.info(f"Students without a repository: {len(missing_students)}")
-        for username in sorted(missing_students):
-            logging.info(f"- {username}")
+    for grouping, repositories in group_repositories.items():
+        expected_groups = {}
+        for group_name, _ in find_groups(course, grouping):
+            group = group_name.removeprefix(f"{course.name}-{grouping}-")
+            expected_groups[group] = [member['login'] for member in find_group_members(course, group_name)]
 
-    elif missing_students:
-        logging.info(f"Students without a repository: {len(missing_students)}")
-        for username in sorted(missing_students):
-            logging.info(f"- {username}")
+        reporters.append(GroupAssignmentReporter(repositories, expected_groups, grouping))
 
-    if non_students:
-        logging.info(f"Non-student members: {len(non_students)}")
-        for non_student in sorted(non_students):
-            logging.info(f"- {non_student}")
+    logging.info(f"Assignment '{name}'")
 
-    if no_commits:
-        logging.info(f"Students without commits: {len(no_commits)}")
-        for username in sorted(no_commits):
-            logging.info(f"- {username}")
-    elif students and not groups:
-        logging.info("All students have commits")
+    for reporter in reporters:
+        reporter.show()
 
-    if not groups:
-        show_pending_students(course)
+    if not reporters:
+        logging.info("No information available for this assignment")
 
 def _find_assignment_repositories(orga, prefix):
     response = request("GET", "https://api.github.com/search/repositories", params={"q": f"org:{orga} {prefix} in:name", "per_page": 100})
