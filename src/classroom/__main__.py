@@ -8,6 +8,7 @@ from .assigment import assignment
 from .groups import groups
 
 import textwrap
+DEFAULT_GROUPING = "group"
 
   
 def main():
@@ -39,14 +40,16 @@ def main():
         .add_argument("--template", "-t", help="GitHub template repository URL")
         .add_argument("--name", "-n", help="Assignment name")
         .add_argument("--private", action="store_true", help="Create private repositories")
-        .add_argument("--user", "-u", nargs="+", help="GitHub usernames to process instead of the course students. Useful for teachers"))
+        .add_argument("--user", "-u", nargs="+", help="GitHub usernames to process instead of the course students. Useful for teachers")
+        .add_argument("--group", nargs="?", const=DEFAULT_GROUPING, help="Create group repositories, optionally specifying the grouping"))
     (builder.addCommand(groups,help="Handle the groups of a course",epilog=_groups_epilog())
         .add_argument("--organization", "-o", help="GitHub organization name")
         .add_argument("--year", "-y", help="Academic year")
         .add_argument("--semester", "-s", help="Academic semester")
         .add_argument("--course", "-c", help="Course section number")
-        .add_argument("--grouping", "-g", default="group", help="Group grouping name. Useful for using different sets of students for different assignments")
+        .add_argument("--grouping", "-g", default=DEFAULT_GROUPING, help="Group grouping name. Useful for using different sets of students for different assignments")
         .add_argument("--delete", action="store_true", help="Delete all groups in the grouping")
+        .add_argument("--list-groupings", "-l", action="store_true", help="List groupings of the course")
         .add_argument("roster",nargs="?",type=line_file,help="Path to a file containing GitHub usernames, one group per line with users separated by spaces",
         ))    
     builder.run()
@@ -160,24 +163,33 @@ def _groups_epilog():
 
 def _assignment_epilog():
     return textwrap.dedent("""
+        Assignments are created individually by default. Use --group to create
+        an assignment for the groups of a course.
+
         A current course is used when no course is specified.
 
         Examples:
 
-            Create an assignment in the current course:
+            Create an individual assignment in the current course:
                 classroom assignment -t https://github.com/obj1unq/pepitaEnunciado
 
-            Create an assignment specifying the course:
+            Create an individual assignment specifying the course:
                 classroom assignment -o obj1unq -y 2026 -s 2 -c 2 -t https://github.com/obj1unq/pepitaEnunciado
 
-            Create an assignment with a custom name:
+            Create an individual assignment with a custom name:
                 classroom assignment -t https://github.com/obj1unq/pepitaEnunciado -n tp1
 
             Create private repositories:
                 classroom assignment -t https://github.com/obj1unq/pepitaEnunciado --private
 
-            Create an assignment for specific users instead of the course students:
+            Create an individual assignment for specific users instead of the course students:
                 classroom assignment -t https://github.com/obj1unq/pepitaEnunciado -u lgassman otro_usuario
+
+            Create a group assignment using the default grouping:
+                classroom assignment -t https://github.com/obj1unq/pepitaEnunciado --group
+
+            Create a group assignment using a specific grouping:
+                classroom assignment -t https://github.com/obj1unq/pepitaEnunciado --group tp1groups
 
             List assignments in the current course:
                 classroom assignment
@@ -192,11 +204,13 @@ def _assignment_epilog():
         students in the course. This can be useful for teachers who need to
         create or clone their own assignment repositories.
 
+        The --group option creates repositories for the groups in the course.
+        When no grouping is specified, the default grouping is "groups".
+
         Without --template, the command only queries existing assignments
         and repositories. The --name option selects a specific assignment.
 
         """)
-
 
 
 

@@ -3,9 +3,13 @@ from .teams import update_github_team, create_github_team, delete_team, find_tea
 import logging
 from collections.abc import Iterator
 
-def groups(organization, year, semester, course, grouping, delete, roster):
+
+def groups(organization, year, semester, course, grouping, delete, list_groupings, roster):
     if roster and delete:
         raise ValueError("--delete cannot be used together with a roster")
+
+    if list_groupings and (roster or delete):
+        raise ValueError("--list-groupings is incompatible with mutable operations")
 
     _course = specified_course_or_current(organization, year, semester, course)
 
@@ -15,13 +19,32 @@ def groups(organization, year, semester, course, grouping, delete, roster):
     if delete:
         return _delete_groups(_course, grouping)
 
+    if list_groupings:
+        return _list_groupings(_course)
+
     return _show_groups(_course, grouping)
+
+def find_groupings(course) -> Iterator[str]:
+    prefix = f"{course.name}-"
+    seen = set()
+
+    for team in find_teams(course.organization, prefix):
+        grouping = team["slug"][len(prefix):].rsplit("-", 1)[0]
+        if grouping not in seen:
+            seen.add(grouping)
+            yield grouping
+
+def _list_groupings(course):
+
+    for grouping in find_groupings(course):
+        logging.info(grouping)
+
 
 def group_name(course, grouping, number):
     return f"{course.name}-{grouping}-{number}"
 
 def _create_or_update_groups(course, grouping, roster):
-    existing = dict(_find_groups(course, grouping))
+    existing = dict(find_groups(course, grouping))
     desired = {group_name(course,grouping,number): set(line.split())for number, line in enumerate(roster, start=1)}
 
     for name in sorted(existing.keys() - desired.keys()):
@@ -36,27 +59,22 @@ def _create_or_update_groups(course, grouping, roster):
             create_github_team(course.organization, name, sorted(users))
 
 
-def _find_groups(course, grouping)-> Iterator[tuple[str, dict]]:
+def find_groups(course, grouping)-> Iterator[tuple[str, dict]]:
     prefix = f"{course.name}-{grouping}-"
     yield from ((team["slug"], team) for team in find_teams(course.organization, prefix))
 
 
 def _delete_groups(course, grouping):
-    for name in _find_groups(course, grouping):
+    for name in find_groups(course, grouping):
         logging.info(f"Deleting group '{name}'")
         delete_team(course.organization, name)
 
-
-# def _show_groups(course, grouping):
-#     for name, _ in _find_groups(course, grouping):
-#         logging.info(f"Group '{name}':")
-
-#         for member in find_team_members(course.organization, name):
-#             logging.info(f"  - {member['login']}")
+def find_group_members(course, group_name):
+    return find_team_members(course.organization, group_name)
 
 def _show_groups(course, grouping):
-    for name, _ in _find_groups(course, grouping):
-        logging.info(f"Team: {name}")
+    for name, _ in find_groups(course, grouping):
+        logging.info(f"Group: {name}")
 
-        for member in find_team_members(course.organization, name):
+        for member in find_group_members(course, name):
             logging.info(f"    {member['login']}")
