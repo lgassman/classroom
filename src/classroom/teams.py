@@ -86,7 +86,7 @@ def remove_member_from_team(orga, name, username):
 
 def _show_team_members(orga, name):
     try:
-        logging.info(f"Members of {orga}-{name}")
+        logging.info(f"Members of {name}")
         _size = 0
         for _size, user in enumerate(find_team_members(orga, name), 1):
             logging.info(f"{user['login']} {user.get('html_url')}")
