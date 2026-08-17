@@ -4,6 +4,8 @@ GitHub course administration tool for managing courses and assignments in a teac
 
 Classroom is a command-line application designed to simplify the administration of programming courses using GitHub. It helps instructors manage courses, student rosters, groups, assignments, repositories, and feedback repositories without having to perform these operations manually through the GitHub web interface.
 
+This project was motivated by the closure of GitHub Classroom and aims to provide an alternative tool for replacing it.
+
 Documentation: [English](#english) · [Español](#español)
 
 ---
